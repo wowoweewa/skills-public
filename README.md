@@ -7,6 +7,7 @@ Public Claude Code skills, organized by category. Each skill is a self-contained
 | Skill | What it does |
 |---|---|
 | [mac-system-doctor](tooling/skills/mac-system-doctor/SKILL.md) | Diagnoses why a Mac is slow, then applies safe, reversible cleanups — and only the ones you approve. Finds junk login items and launch agents, oversized regenerable caches, browser/Electron process bloat, and screen-compositing overload. Never touches personal data, never uses sudo, never force-kills anything. |
+| [skill-optimizer](tooling/skills/skill-optimizer/SKILL.md) | Quality-assurance companion to Anthropic's `skill-creator` for authoring SKILL.md files. Adds the opinionated criteria skill-creator leaves open: trigger-first descriptions, the 5 Skill Killers check, gotcha rigor, freedom-matching, and a pre-ship verification checklist. |
 
 ## Install
 

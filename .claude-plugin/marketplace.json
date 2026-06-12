@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "tooling",
-      "description": "System tooling skills: mac-system-doctor — diagnoses Mac slowness (per-app CPU/RAM aggregation, memory pressure, startup junk, cache bloat) and applies consent-gated, reversible fixes.",
-      "version": "1.0.0",
+      "description": "System tooling skills: mac-system-doctor — diagnoses Mac slowness and applies consent-gated, reversible fixes; skill-optimizer — quality-assurance layer for authoring SKILL.md files (triggering, gotcha rigor, verification checklist).",
+      "version": "1.1.0",
       "source": "./tooling"
     }
   ]
