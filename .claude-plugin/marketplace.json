@@ -1,0 +1,16 @@
+{
+  "name": "skills-public",
+  "description": "Public Claude Code skills: safe Mac performance diagnosis and cleanup, organized by category.",
+  "owner": {
+    "name": "wowoweewa",
+    "url": "https://github.com/wowoweewa/skills-public"
+  },
+  "plugins": [
+    {
+      "name": "tooling",
+      "description": "System tooling skills: mac-system-doctor — diagnoses Mac slowness (per-app CPU/RAM aggregation, memory pressure, startup junk, cache bloat) and applies consent-gated, reversible fixes.",
+      "version": "1.0.0",
+      "source": "./tooling"
+    }
+  ]
+}
