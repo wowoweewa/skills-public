@@ -1,11 +1,11 @@
 ---
 name: skill-optimizer
-description: Quality-assurance companion to `skill-creator` — load this skill alongside `skill-creator` whenever the user is authoring, editing, or improving any SKILL.md file. Make sure to use this skill even when skill-creator is the only one explicitly named, because it adds opinionated quality criteria that skill-creator deliberately leaves open. Use when the user says "create a skill", "build a new skill", "make a skill", "write a skill", "edit this skill", "improve this skill", "rewrite this skill", "fix this skill description", "the skill isn't triggering", or any request involving authoring or modifying a SKILL.md file. Adds: third-person descriptions, ≥5 trigger phrases, gotcha rigor, freedom-matching, 5 Skill Killers check, verification checklist.
+description: Quality-assurance companion to `skill-creator` — load this skill alongside `skill-creator` whenever the user is authoring, editing, or improving any SKILL.md file. Make sure to use this skill even when skill-creator is the only one explicitly named, because it adds opinionated quality criteria that skill-creator deliberately leaves open. Use when the user says "create a skill", "build a new skill", "make a skill", "write a skill", "edit this skill", "improve this skill", "rewrite this skill", "fix this skill description", "the skill isn't triggering", or any request involving authoring or modifying a SKILL.md file. Adds: third-person descriptions, ≥5 trigger phrases, gotcha rigor, freedom-matching, executor-proofing, self-verification, multi-agent cost architecture, truth discipline, 5 Skill Killers check, verification checklist.
 ---
 
 # Skill Optimizer
 
-Quality-assurance layer for SKILL.md authoring. Loads alongside `skill-creator` (which handles file scaffolding and validation) so the skill that ships triggers reliably, captures real failure patterns, and earns every token it spends.
+Quality-assurance layer for SKILL.md authoring. Loads alongside `skill-creator` (which handles file scaffolding and validation) so the skill that ships triggers reliably, captures real failure patterns, earns every token it spends — and survives execution by a weaker model than the one that wrote it.
 
 ## When this fires vs `skill-creator`
 
@@ -28,7 +28,7 @@ The five most common reasons skills fail. Avoid these and most quality issues ta
 | 4 | **Missing gotcha section** — not capturing failure patterns | Document every failure you've seen. This IS the skill's value |
 | 5 | **Monolithic blob** — everything in one file | SKILL.md under 500 lines. Move references to separate files |
 
-The Process section below is the detailed how-to for avoiding each killer.
+The Process section below is the detailed how-to for avoiding each killer. The killers cover the SKILL.md document itself; Process steps 7–10 cover execution reliability — the half most authors skip, and where skills actually fail in the field.
 
 ## Process
 
@@ -101,6 +101,41 @@ If approaching the limit:
 - Split supplementary content into `references/<topic>.md` and link from SKILL.md
 - Keep references **one level deep** — Claude may partially read deeply nested files (e.g., uses `head -100` for previews)
 - Reference files >100 lines: include a table of contents at the top
+
+### 7. Write for a weaker executor than you
+
+Assume the model running the skill is less capable than the one authoring it. Everything a strong author "would just know" must be on the page — ambiguity, not missing knowledge, is where weak executors fail.
+
+- **Every decision point gets a stated default** ("when unsure, do X"). Open choices ("select an appropriate depth") make weaker executors improvise — the top source of run-to-run variance.
+- **Thresholds are numbers, not adjectives.** "Drop sources older than 5 years", not "prefer recent sources".
+- **Commands are literal and complete** — flags, quoting, working directory. A prose gloss ("upload via the CLI") forces the executor to reconstruct the command and fail on the details.
+- **Deterministic work goes in `scripts/`, not prose.** Counting, math, parsing, table assembly → bundled script; the model fills judgment fields only. (Observed: a reporting skill became reliable only when a script took over all arithmetic and the model was limited to writing 2–3 theme sentences.)
+- **State the why in one clause for every non-obvious rule.** A model that knows why a rule exists handles the case the rule didn't anticipate; a naked MUST invites literal-minded compliance.
+- **Show the wrong output next to the right one** for banned patterns — negative examples teach faster than positive ones.
+- **Subagents can't read the skill file.** If a skill dispatches subagents, their prompts must carry everything they need pasted in — a prompt that names a section ("apply the source-priority rules") hands the subagent nothing.
+
+### 8. Make the skill verify its own output
+
+A rule without a check will be violated silently — not because the executor is careless, but because long outputs drift.
+
+- **Every load-bearing rule gets a mechanical check** the skill runs before declaring done: grep the output for banned vocabulary, run the bundled validator, re-count against the source. (Observed: a formatter's "never use X terminology" rule kept being violated until the skill gained a final grep step.)
+- **Checks gate the deliverable.** State the on-failure action (fix, then re-check) or the executor treats the check as advisory.
+- **A skill never run end-to-end is a draft.** One real run beats three review passes. (Observed: a screening skill survived multiple review passes, then its first live run exposed misread filing codes and fabricated catalysts.) Use `skill-creator`'s eval loop for the full treatment; the floor is one run on a real input or fixture.
+
+### 9. Multi-file and multi-agent architecture
+
+- **Contract rule:** every file the skill references must exist (`ls`-verify), and every promise SKILL.md makes about a reference ("the synthesizer covers X") must appear in that file. When you edit one side of a contract, grep for the other side. (Observed: the two worst defects in a mature suite were a roster recommending files that didn't exist and a prompt file missing a section its SKILL.md promised.)
+- **Say it once, at the bottleneck.** A rule every output must obey lives at the narrowest point all outputs pass through (the final formatter/renderer) — never copied into upstream files. Copies drift; the next edit updates one and orphans the rest.
+- **Fan-out sizing:** every subagent needs a named consumer — say where its output lands in the synthesis. An agent whose output nothing reads is pure token burn.
+- **Tier assignment:** mechanical stages (fetch, extract, reformat) on the cheapest tier; judgment stages (verdicts, synthesis, adversarial critique) on the strongest. Say so per stage, using tier aliases.
+- **Partial failure:** fan-outs die mid-run (usage limits, crashes). State the quorum ("proceed if ≥N of M return", "missing critic X blocks synthesis") and the fallback (re-run that lens in the main loop, which survives limit exhaustion). A skill that assumes all agents return degrades silently after burning the tokens.
+
+### 10. Truth discipline (skills that produce factual content)
+
+- **Every factual claim carries its source inline.** No source → drop the claim, don't hedge it.
+- **Never pad to a count.** If the skill asks for 10 and reality yields 3, ship 3 and say why — padding is where fabrication enters. (Observed: a screening skill invented plausible catalysts to fill its quota until the not-found fallback was made explicit.)
+- **Every retrieval step states its not-found behavior:** write "not found", drop the item, or ask — never infer.
+- **Name the save path.** If output has value past this session, state the exact location and format. (Observed: one skill's results evaporated with the session for weeks while its sister skill auto-saved.)
 
 ## Output Format
 
@@ -186,4 +221,11 @@ Read these files before running:
 - [ ] Under 500 lines; references one level deep; >100-line refs have a table of contents
 - [ ] No Windows-style paths, no time-sensitive content, consistent terminology
 - [ ] Model references use tier aliases (`opus`/`sonnet`/`haiku`) or bare tier names — never pinned versions (`claude-opus-4-7`, "Opus 4.7"), which rot every release
+- [ ] Every decision point has a stated default; thresholds are numbers, not adjectives
+- [ ] Deterministic work (math, counting, parsing) is a bundled script, not prose instructions
+- [ ] Every load-bearing rule has a mechanical output check with a stated on-failure action
+- [ ] Skill has run end-to-end at least once on a real input or fixture
+- [ ] Multi-file: referenced files exist (`ls`-verified); cross-file promises verified on both sides; shared rules live once, at the bottleneck
+- [ ] Multi-agent: every subagent output has a named consumer; stage tiers assigned; quorum + main-loop fallback stated for partial failure; subagent prompts carry pasted context, not section names
+- [ ] Content skills: sources inline per claim; not-found fallbacks stated; never pads to a count; save path named
 - [ ] If editing an existing skill: read first, edit minimally
