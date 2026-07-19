@@ -24,10 +24,14 @@ Match against login items (`System Events` listing) and launch agent plists (`~/
 | Password managers | 1Password helpers, Bitwarden, KeePassXC | Browser integration breaks |
 | Time trackers / monitors the user installed | RescueTime, Rize, Usage, iStat Menus | Heavy but chosen — report the CPU cost, let the user decide; don't classify as junk |
 | Anything security/auth/backup | antivirus the user chose, Time Machine helpers, MDM agents | Breaking these has consequences beyond performance |
+| Local model stores of active tools | speech/ASR models under `~/.cache/<tool>` for a dictation app, embedding models for a local AI tool | Looks like a fat cache; clearing it breaks the tool until a multi-hundred-MB re-download |
+| Audio HAL drivers of present hardware/apps | BlackHole, mic-vendor drivers (Rode etc.), an installed app's own audio plugin in `/Library/Audio/Plug-Ins/HAL/` | Removing breaks routing for gear/apps still in use — verify the owner is uninstalled before calling it an orphan |
 
 ## Classification rules
 
 - An item on neither list with a recognizable app name: classify by the table *category* it resembles (updater? launcher helper? sync engine?).
-- An unrecognizable item: leave it alone and flag it in the report as "unknown — left untouched".
-- System-domain agents (`/Library/LaunchAgents`, `/Library/LaunchDaemons`) need admin rights — never modify; mention only.
+- An unrecognizable item: identify before judging — `codesign -dvvv` on the plist's `Program` binary; the `Authority=Developer ID Application: <vendor>` line names who shipped it (a helper labeled `com.starstechnologies.*` turned out to be a poker client's updater this way). Still unknown after that: leave it alone and flag it as "unknown — left untouched".
+- Orphan check beats category: whatever the category, if the parent app is no longer installed, the item is an orphan and safe to propose. Verify absence in /Applications (and the app's known install dirs), not by name-guessing.
+- Substring hits are not identifications — a `wdc` (Western Digital) scan also matches `com.crowdcafe.windowmagnet`. Resolve every pattern hit to its owning app before classifying.
+- System-domain items (`/Library/LaunchAgents`, `/Library/LaunchDaemons`) need admin rights — removal only through the SKILL.md consented-elevation path (one osascript admin dialog), never raw sudo; without that grant, mention only.
 - The keep-list always wins a conflict between the two tables.

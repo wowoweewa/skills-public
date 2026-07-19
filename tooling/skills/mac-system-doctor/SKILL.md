@@ -42,6 +42,9 @@ ls ~/Library/LaunchAgents/ /Library/LaunchAgents/ 2>/dev/null
 # Regenerable caches only (never plan to clear ~/Library/Caches wholesale)
 du -sh ~/.npm ~/Library/Caches/Homebrew ~/Library/Caches/pip ~/.cache 2>/dev/null
 
+# Applied-update leftovers from Electron auto-updaters — dead weight once the update installed
+find ~/Library/Caches -maxdepth 1 \( -iname "*.ShipIt" -o -iname "*-updater" \) -exec du -sh {} + 2>/dev/null
+
 # Browser bloat — anchor on the .app path; bare substrings false-positive wildly
 # (e.g. "Edge" matches siriknowledged, "Arc" matches searchpartyd, "Chrome" matches every
 #  Electron app's chrome_crashpad_handler). Safari web content runs as com.apple.WebKit.*
@@ -61,6 +64,8 @@ for b in "Brave Browser" "Google Chrome" "Safari" "Firefox" "Microsoft Edge" "Ar
 
 Match login items and launch agents against `references/junk-signatures.md` — it has the junk patterns and, critically, the keep-list.
 
+For every `/Library/LaunchDaemons` / `/Library/LaunchAgents` entry, orphan-check before classifying: read the plist's `Program` path, then verify the parent app still exists (`ls /Applications/<App>.app`). Unknown helper binary? `codesign -dvvv <path>` — the `Authority=Developer ID Application: <vendor>` line names who shipped it. Parent uninstalled → orphan, safe to propose; parent present → judge by the junk-signatures tables.
+
 ### 3. Report (verdict first — see Output Format)
 
 Rank findings by measured impact. Healthy subsystems get one "ruled out" line, not paragraphs.
@@ -75,7 +80,7 @@ If running headless or as a subagent (no user to ask): stop after the report, re
 
 - **Login items**: `osascript -e 'tell application "System Events" to delete login item "<exact name from step 1 output>"'`
 - **Launch agents**: `launchctl bootout "gui/$(id -u)" "<full plist path>"` then `mv` the plist to `~/Library/LaunchAgents.disabled/` (create it). Moving — not deleting — makes restore a one-line `mv` back. `launchctl unload` is deprecated; don't use it.
-- **Caches**: official tools only — `npm cache clean --force`, `brew cleanup --prune=all`, `pip cache purge`, `yarn cache clean`, `pnpm store prune`. Run only the ones whose tool is installed; each cache regenerates on next use.
+- **Caches**: official tools only — `npm cache clean --force`, `brew cleanup --prune=all`, `pip cache purge`, `yarn cache clean`, `pnpm store prune`. Run only the ones whose tool is installed; each cache regenerates on next use. `*.ShipIt` / `*-updater` directories in `~/Library/Caches` are already-applied update downloads and safe to `rm -rf` after consent.
 - **Heavy idle apps**: sample instantaneous CPU first (`top -l 2`); only offer to quit if genuinely idle, and quit gracefully (`osascript -e 'quit app "X"'`). If it survives the quit, report that and stop — never escalate to `kill`.
 
 ### 6. Verify
@@ -113,12 +118,15 @@ Re-run the relevant probe from step 1 for everything changed. Report before → 
 - **The diagnosis pollutes its own measurements.** Running probes spikes load average and trustd. Distinguish standing load from your own footprint by re-sampling before concluding.
 - **Fresh uptime hides the real problem.** If the machine rebooted recently, today's healthy snapshot may not reflect the slow state the user experienced. Note uptime in the report and ask them to re-run at the next slow moment.
 - **Spotlight is usually innocent.** Check actual `mds`/`mdworker` CPU before suggesting index rebuilds — rebuilding a healthy index makes the machine slower for hours.
+- **An unmatched glob aborts the whole compound command in zsh.** One `du -sh a b Caches/foo*` where the glob matches nothing prints "no matches found" and kills every other measurement on that line — silently reporting "nothing there" when plenty exists. For paths that may not exist, use `find -iname` or a per-path `[ -e ] &&` loop, never bare globs.
+- **Some "caches" are load-bearing model stores.** A gigabyte under `~/.cache/<tool>` can be an active dictation/transcription app's downloaded speech models — clearing it breaks the tool until a multi-hundred-MB re-download. List a cache directory's contents and map each large entry to its owning tool before offering it.
+- **Short substring patterns false-positive across reverse-DNS names.** A scan for a vendor prefix like `wdc` also matches `com.crowdcafe.windowmagnet` — an unrelated, actively-used app. Before classifying any pattern hit as junk, resolve which app actually owns it; delete only names captured and verified, never pattern output directly.
 
 ## Constraints
 
 - **Personal data is off-limits absolutely**: never read, list, or touch Photos, Messages, Mail, Documents, Desktop, iCloud Drive, browser profiles/history/cookies, or Keychain — not even read-only `du` over them.
 - **No deletion, unload, or app-quit without the step 4 consent gate.** Reversibility is not a substitute for consent.
-- **No sudo, ever.** Everything here works at user level. If a fix would need admin rights (system analytics toggle, /Library agents), describe the one Settings toggle instead.
+- **No raw `sudo`, ever** — it hangs or fails without a TTY. When an approved fix genuinely needs admin rights (orphaned /Library daemons, root-owned leftovers) AND the user has explicitly granted elevation, use the native password dialog instead: `osascript -e 'do shell script "bash <script>" with administrator privileges'`. Bundle every approved root action into ONE script per prompt (each dialog costs the user a password entry), announce the dialog before launching so they expect it, and prefer `rmdir` over `rm -rf` for supposedly-empty directories so a wrong assumption fails loudly instead of deleting contents. Without that explicit grant — or running headless — describe the fix and its exact command instead of executing it.
 - **Never kill system processes** — WindowServer, mds, trustd, kernel_task, or any Apple daemon. Misbehaving daemons get noted, not killed.
 - **No third-party cleaner tools** — never recommend or install MacKeeper/CleanMyMac-class software; this skill exists to replace them.
 - **Browser tabs and interactive app sessions belong to the user** — report their cost, never close them.
