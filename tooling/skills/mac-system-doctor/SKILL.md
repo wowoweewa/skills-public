@@ -1,6 +1,6 @@
 ---
 name: mac-system-doctor
-description: Diagnoses why a Mac is slow and applies safe, reversible cleanups — aggregates per-app CPU and RAM, samples memory pressure and swap, finds junk login items and launch agents, oversized regenerable caches, browser and Electron process bloat, and screen-compositing (WindowServer) overload, then fixes only what the user approves. Never touches personal data. Use when the user says "my Mac is slow", "run system doctor", "check my system health", "what's slowing down my machine", "clean up system junk", "Mac feels laggy", "why is my computer hot/loud", "do a performance checkup", or asks for safe Mac optimization or a system health diagnosis.
+description: Diagnoses why a Mac is slow and applies safe, reversible cleanups — aggregates per-app CPU and RAM, samples memory pressure and swap, finds junk login items and launch agents, oversized regenerable caches, browser and Electron process bloat, screen-compositing (WindowServer) overload, and stale LaunchServices records that trigger phantom app warnings, then fixes only what the user approves. Never touches personal data. Use when the user says "my Mac is slow", "run system doctor", "check my system health", "what's slowing down my machine", "clean up system junk", "Mac feels laggy", "why is my computer hot/loud", "do a performance checkup", "why do I keep getting Intel app warnings", "Support Ending for Intel-based Apps won't go away", "macOS warns about an app I already deleted", or asks for safe Mac optimization or a system health diagnosis.
 ---
 
 # Mac System Doctor
@@ -45,6 +45,14 @@ du -sh ~/.npm ~/Library/Caches/Homebrew ~/Library/Caches/pip ~/.cache 2>/dev/nul
 # Applied-update leftovers from Electron auto-updaters — dead weight once the update installed
 find ~/Library/Caches -maxdepth 1 \( -iname "*.ShipIt" -o -iname "*-updater" \) -exec du -sh {} + 2>/dev/null
 
+# ONLY if the complaint is a recurring "Support Ending for Intel-based Apps" (or similar)
+# notification naming an app that's already deleted: LaunchServices keeps its own database,
+# records outlive the files, and every macOS update rescan re-posts the warning from the
+# record — not the disk. Spotlight can't rule this out (it doesn't index /opt or /usr/local).
+LS=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+$LS -dump | grep -E "^path:" | grep -i "<AppName>"        # find every registered copy
+$LS -dump | grep -A14 "<AppName>" | grep -E "path:|slices:" # ghost = path gone from disk, slices: x86_64 only
+
 # Browser bloat — anchor on the .app path; bare substrings false-positive wildly
 # (e.g. "Edge" matches siriknowledged, "Arc" matches searchpartyd, "Chrome" matches every
 #  Electron app's chrome_crashpad_handler). Safari web content runs as com.apple.WebKit.*
@@ -82,6 +90,7 @@ If running headless or as a subagent (no user to ask): stop after the report, re
 - **Launch agents**: `launchctl bootout "gui/$(id -u)" "<full plist path>"` then `mv` the plist to `~/Library/LaunchAgents.disabled/` (create it). Moving — not deleting — makes restore a one-line `mv` back. `launchctl unload` is deprecated; don't use it.
 - **Caches**: official tools only — `npm cache clean --force`, `brew cleanup --prune=all`, `pip cache purge`, `yarn cache clean`, `pnpm store prune`. Run only the ones whose tool is installed; each cache regenerates on next use. `*.ShipIt` / `*-updater` directories in `~/Library/Caches` are already-applied update downloads and safe to `rm -rf` after consent.
 - **Heavy idle apps**: sample instantaneous CPU first (`top -l 2`); only offer to quit if genuinely idle, and quit gracefully (`osascript -e 'quit app "X"'`). If it survives the quit, report that and stop — never escalate to `kill`.
+- **LaunchServices ghost records** (phantom "Support Ending" warnings for deleted apps): `$LS -u "<dead path>"` for each ghost record, then `$LS -gc` to compact. User-level, no sudo. Verify by re-running the dump grep — the record must be gone. Already-delivered banners will NOT disappear: the Notification Center database is Full-Disk-Access-protected, so no command can dismiss them — tell the user to Clear All in Notification Center once, and that no new ones can fire.
 
 ### 6. Verify
 
@@ -120,6 +129,8 @@ Re-run the relevant probe from step 1 for everything changed. Report before → 
 - **Spotlight is usually innocent.** Check actual `mds`/`mdworker` CPU before suggesting index rebuilds — rebuilding a healthy index makes the machine slower for hours.
 - **An unmatched glob aborts the whole compound command in zsh.** One `du -sh a b Caches/foo*` where the glob matches nothing prints "no matches found" and kills every other measurement on that line — silently reporting "nothing there" when plenty exists. For paths that may not exist, use `find -iname` or a per-path `[ -e ] &&` loop, never bare globs.
 - **Some "caches" are load-bearing model stores.** A gigabyte under `~/.cache/<tool>` can be an active dictation/transcription app's downloaded speech models — clearing it breaks the tool until a multi-hundred-MB re-download. List a cache directory's contents and map each large entry to its owning tool before offering it.
+- **Deleting an app's files doesn't delete macOS's opinion of it.** LaunchServices records persist after deletion, and the OS-update compatibility rescan reads the database, not the disk — so "Support Ending" warnings keep firing for apps that are long gone. Diagnosing from the filesystem alone ("no Intel binaries anywhere, must be a stale banner") misses this; dump the LS database before concluding.
+- **`lsregister -kill` no longer exists.** Modern macOS removed the flag ("dangerous and no longer useful") — the working sequence is `-u <path>` per stale record then `-gc`. Never `-delete` (nukes the whole database and demands a reboot).
 - **Short substring patterns false-positive across reverse-DNS names.** A scan for a vendor prefix like `wdc` also matches `com.crowdcafe.windowmagnet` — an unrelated, actively-used app. Before classifying any pattern hit as junk, resolve which app actually owns it; delete only names captured and verified, never pattern output directly.
 
 ## Constraints
