@@ -1,11 +1,13 @@
 ---
 name: skill-optimizer
-description: Quality-assurance companion to `skill-creator` — load this skill alongside `skill-creator` whenever the user is authoring, editing, or improving any SKILL.md file. Make sure to use this skill even when skill-creator is the only one explicitly named, because it adds opinionated quality criteria that skill-creator deliberately leaves open. Use when the user says "create a skill", "build a new skill", "make a skill", "write a skill", "edit this skill", "improve this skill", "rewrite this skill", "fix this skill description", "the skill isn't triggering", or any request involving authoring or modifying a SKILL.md file. Adds: third-person descriptions, ≥5 trigger phrases, gotcha rigor, freedom-matching, executor-proofing, self-verification, multi-agent cost architecture, truth discipline, 5 Skill Killers check, verification checklist.
+description: Use when the user says "create a skill", "build a new skill", "make a skill", "write a skill", "edit this skill", "improve this skill", "rewrite this skill", "review this SKILL.md", "fix this skill description", "the skill isn't triggering", or any request involving authoring or modifying a SKILL.md file. Quality-assurance companion to `skill-creator`: load it alongside `skill-creator` even when skill-creator is the only one named, because it adds the quality criteria skill-creator deliberately leaves open — knowledge that raises the ceiling, third-person descriptions with five or more triggers and sibling routing, gotcha rigor, freedom-matching, executor-proofing, self-verification with a bundled checker, multi-agent cost architecture, truth discipline. Does NOT replace skill-creator (use skill-creator for scaffolding, packaging, and evals).
 ---
 
 # Skill Optimizer
 
 Quality-assurance layer for SKILL.md authoring. Loads alongside `skill-creator` (which handles file scaffolding and validation) so the skill that ships triggers reliably, captures real failure patterns, earns every token it spends — and survives execution by a weaker model than the one that wrote it.
+
+**What a skill is for.** A skill is expert context that lets the model perform above its default: the sourced research on what good looks like in the domain, what elite practitioners do, which folklore fails verification, and which failures have been observed. The model supplies the judgment. A skill raises the ceiling by adding knowledge the model lacks; it never limits the model with rules that tell it how to think. Process rules exist for mechanics only — paths, commands, checks, handoffs, shared vocabularies, legal gates.
 
 ## When this fires vs `skill-creator`
 
@@ -23,8 +25,8 @@ The five most common reasons skills fail. Avoid these and most quality issues ta
 | # | Killer | Fix |
 |---|---|---|
 | 1 | **Description doesn't trigger properly** — too vague, too narrow, or wrong person | Specific, loud, third-person, `Use when...` format |
-| 2 | **Over-defining the process** — railroading instead of guiding | Set degrees of freedom — tight for fragile, loose for creative |
-| 3 | **Stating the obvious** — wasting tokens on what Claude already knows | Challenge every paragraph: "Does Claude really need this?" |
+| 2 | **Over-defining the process** — railroading instead of guiding; a skill boosts capability and never limits it | Guidance and checklists, not rigid templates for creative output. Tight freedom for fragile mechanics, loose for judgment |
+| 3 | **Stating the obvious, omitting the non-obvious** — tokens spent on what the model already knows, none on what it lacks | Every paragraph is either knowledge (a finding, a source, an observed failure, a why) or a thinking instruction. Keep knowledge, cut thinking instructions |
 | 4 | **Missing gotcha section** — not capturing failure patterns | Document every failure you've seen. This IS the skill's value |
 | 5 | **Monolithic blob** — everything in one file | SKILL.md under 500 lines. Move references to separate files |
 
@@ -60,6 +62,7 @@ The description is the **most critical line** in the skill — it's the primary 
 - **Be LOUD, not quiet.** Claude tends to under-trigger skills. End with one concrete sentence on what the skill *does*, not what it *is*.
 - **Stay under 1024 characters.** The frontmatter `description` field caps at 1024 — loudness past the cap gets truncated, and the truncated tail is usually the trigger phrases.
 - **Both what AND when.** All "when to use" info goes in the description, never the body.
+- **Test every trigger against the siblings.** Before shipping, list every skill in the library and every agent that preloads this skill that could also claim each trigger phrase, and settle each collision with `Does NOT trigger on X (use Y)` naming the sibling. An agent that preloads a skill never repeats that skill's triggers — one phrase would otherwise spawn the agent and load the skill at once. (Observed: a routing test across eleven sibling skills found eighteen of twenty phrases claimed by two or more.)
 
 ✅ `Processes Excel files, creates pivot tables, generates charts. Use when the user says "analyze this xlsx", "make a pivot table", "chart this spreadsheet", or works with .xlsx/.xlsm files.`
 
@@ -67,10 +70,11 @@ The description is the **most critical line** in the skill — it's the primary 
 
 ### 3. Body — required sections in this order
 
-1. **Steps / Process** — numbered, concrete actions. Match freedom level to task fragility (see step 4).
-2. **Output Format** — literal template. Show, don't describe.
-3. **Gotchas** — every failure pattern observed. The highest-signal section; this IS the skill's value.
-4. **Constraints** — what NOT to do. Sharp rules specific to THIS skill, not general behavior.
+1. **Knowledge** (required for judgment skills — design, copy, research, analysis) — what the research says makes output good in this domain, one line per finding with its source and how it changes the output; the practitioner observations; the folklore that fails verification. This is the section that raises the ceiling. Name the research briefs it draws on so it can be refreshed when new research lands.
+2. **Steps / Process** — numbered, concrete actions. Match freedom level to task fragility (see step 4).
+3. **Output Format** — literal template. Show, don't describe.
+4. **Gotchas** — every failure pattern observed. The highest-signal section; this IS the skill's value.
+5. **Constraints** — what NOT to do. Sharp rules specific to THIS skill, not general behavior.
 
 Optional, include only when relevant:
 - **Context Required** — files the skill needs to read at session start (full paths, since the agent doesn't remember prior sessions).
@@ -87,9 +91,11 @@ Optional, include only when relevant:
 
 Robot-on-a-path analogy: narrow bridge with cliffs → guardrails (low freedom). Open field → general direction (high freedom). Wrong level either wastes tokens or over-constrains the model.
 
+Judgment skills default to High. A constraint earns its place only with an observed, costly failure behind it; a literal template is for mechanical output (records, token files, reports a script parses), never for the creative deliverable itself.
+
 ### 5. Trim ruthlessly
 
-**Default assumption: Claude is already very smart.** Challenge every paragraph: does it tell the model something it doesn't already know?
+**Default assumption: Claude is already very smart.** Ask of every paragraph: is this knowledge (a finding, a source, an observed failure, a why) or a thinking instruction? Keep knowledge, cut thinking instructions. Also cut the same principle stated twice — a rule repeated six times across a file reads as emphasis to the author and as noise to the model. (Observed: one design skill stated its central principle six times and its scope rule four times.)
 
 - Cut generic advice ("write production-ready code") — duplicates CLAUDE.md
 - Cut identity preambles ("Act as a senior strategist...") — legacy prompt-engineering pattern; tell the model what your *approach* does, not what *persona* to adopt
@@ -106,9 +112,12 @@ If approaching the limit:
 
 Assume the model running the skill is less capable than the one authoring it. Everything a strong author "would just know" must be on the page — ambiguity, not missing knowledge, is where weak executors fail.
 
+- **Scope: mechanics, not judgment.** Executor-proofing applies to paths, commands, checks, handoffs, and shared vocabularies. For a high-freedom skill a default is a labelled starting point ("when no brand exists, start here"), never a format the creative output must fill.
+- **Mode skills state the mode rule first, with a default.** A skill with a build mode and a review mode names the deciding signal ("an existing file, URL, or screenshot means review; otherwise build") before anything else. (Observed: three skills with two modes each and no default.)
 - **Every decision point gets a stated default** ("when unsure, do X"). Open choices ("select an appropriate depth") make weaker executors improvise — the top source of run-to-run variance.
 - **Thresholds are numbers, not adjectives.** "Drop sources older than 5 years", not "prefer recent sources".
 - **Commands are literal and complete** — flags, quoting, working directory. A prose gloss ("upload via the CLI") forces the executor to reconstruct the command and fail on the details.
+- **No placeholder paths, and commands respect the user's standing rules.** An angle-bracketed stand-in for the skill's own directory forces path discovery on every run; write the literal path in the library's convention. A command that opens a browser, deletes, or sends must match what the user's CLAUDE.md allows without asking. (Observed: six placeholder path forms across one skill pair, and a render command carrying an open-in-browser flag against a never-open-unasked rule.)
 - **Deterministic work goes in `scripts/`, not prose.** Counting, math, parsing, table assembly → bundled script; the model fills judgment fields only. (Observed: a reporting skill became reliable only when a script took over all arithmetic and the model was limited to writing 2–3 theme sentences.)
 - **State the why in one clause for every non-obvious rule.** A model that knows why a rule exists handles the case the rule didn't anticipate; a naked MUST invites literal-minded compliance.
 - **Show the wrong output next to the right one** for banned patterns — negative examples teach faster than positive ones.
@@ -120,22 +129,40 @@ A rule without a check will be violated silently — not because the executor is
 
 - **Every load-bearing rule gets a mechanical check** the skill runs before declaring done: grep the output for banned vocabulary, run the bundled validator, re-count against the source. (Observed: a formatter's "never use X terminology" rule kept being violated until the skill gained a final grep step.)
 - **Checks gate the deliverable.** State the on-failure action (fix, then re-check) or the executor treats the check as advisory.
+- **Steps agree with the Output Format.** Any instruction about output shape in Steps that differs from the template gets deleted; the template is the bottleneck. (Observed: three sibling skills each said "group by category" in a step while their template grouped by severity — two layouts, chosen at random per run.)
+- **Templates and bundled assets pass their own checkers.** Run the skill's checker against its own Output Format template and sample assets before shipping. (Observed: a record template that failed the skill's own checker on a required line, so every literal-following run hit a FAIL it had to improvise around.)
+- **Verification order: mechanical checks, then the human-visible check.** Run scripts first, then render and look; any fix re-runs both, or a page fixed after a failed check ships unseen.
+- **Bundled scripts accept `-h/--help` and name the line and matched text on failure.** A script that treats `--help` as a filename, or reports "2 pattern(s)" with no location, sends a weak executor grepping.
 - **A skill never run end-to-end is a draft.** One real run beats three review passes. (Observed: a screening skill survived multiple review passes, then its first live run exposed misread filing codes and fabricated catalysts.) Use `skill-creator`'s eval loop for the full treatment; the floor is one run on a real input or fixture.
 
 ### 9. Multi-file and multi-agent architecture
 
 - **Contract rule:** every file the skill references must exist (`ls`-verify), and every promise SKILL.md makes about a reference ("the synthesizer covers X") must appear in that file. When you edit one side of a contract, grep for the other side. (Observed: the two worst defects in a mature suite were a roster recommending files that didn't exist and a prompt file missing a section its SKILL.md promised.)
 - **Say it once, at the bottleneck.** A rule every output must obey lives at the narrowest point all outputs pass through (the final formatter/renderer) — never copied into upstream files. Copies drift; the next edit updates one and orphans the rest.
+- **Shared vocabularies cross files verbatim.** Any value list passed between skills or to a subagent — surface types, severity tiers, finding tags, declaration syntax — is defined once and pasted; grep both sides on every edit. (Observed: one critic received three different surface-type lists from three callers and silently remapped; two checkers in one pipeline demanded two spellings of the same declaration.)
+- **Deliberate mirrors name a source side.** When a subagent prompt copies a parent's principles so it is self-contained, the parent states which file is the source; edits go there first and get mirrored in the same commit. (Observed: a mirror that declared itself intentional drifted to a different item count within a month.)
 - **Fan-out sizing:** every subagent needs a named consumer — say where its output lands in the synthesis. An agent whose output nothing reads is pure token burn.
 - **Tier assignment:** mechanical stages (fetch, extract, reformat) on the cheapest tier; judgment stages (verdicts, synthesis, adversarial critique) on the strongest. Say so per stage, using tier aliases.
-- **Partial failure:** fan-outs die mid-run (usage limits, crashes). State the quorum ("proceed if ≥N of M return", "missing critic X blocks synthesis") and the fallback (re-run that lens in the main loop, which survives limit exhaustion). A skill that assumes all agents return degrades silently after burning the tokens.
+- **Partial failure:** fan-outs die mid-run (usage limits, crashes). State the quorum ("proceed if ≥N of M return", "missing critic X blocks synthesis") and the fallback (re-run that lens in the main loop, which survives limit exhaustion). A skill that assumes all agents return degrades silently after burning the tokens. A single dispatch needs the same fallback: if the one agent returns nothing, apply its prompt in the main loop and say so in the output.
 
-### 10. Truth discipline (skills that produce factual content)
+### 10. Truth discipline (every number in every skill)
 
-- **Every factual claim carries its source inline.** No source → drop the claim, don't hedge it.
+- **Every factual claim carries its source inline.** No source → drop the claim, don't hedge it. This includes design and copy guidance: a percentage, a "studies show", or a quoted expert in a skill body needs its source on the same line, or the number goes. (Observed: a skill describing itself as evidence-verified carried six unsourced figures.)
 - **Never pad to a count.** If the skill asks for 10 and reality yields 3, ship 3 and say why — padding is where fabrication enters. (Observed: a screening skill invented plausible catalysts to fill its quota until the not-found fallback was made explicit.)
 - **Every retrieval step states its not-found behavior:** write "not found", drop the item, or ask — never infer.
 - **Name the save path.** If output has value past this session, state the exact location and format. (Observed: one skill's results evaporated with the session for weeks while its sister skill auto-saved.)
+
+## Mechanical check
+
+`scripts/check_skill.py` enforces every rule above that can be checked without judgment. Run it on every skill you create or edit, before declaring done:
+
+```bash
+python3 ~/.claude/skills/skill-optimizer/scripts/check_skill.py <skill-dir>
+```
+
+It fails on: a description over 1024 characters, under five quoted triggers, or without "Use when"; first or second person in the description; SKILL.md over 500 lines; a missing required section; a referenced file that does not exist; a table-of-contents entry with no heading; a placeholder path; a pinned model version; an evidence phrase with no source on the line; a bundled script that fails `--help`. It warns on: "Use when" arriving late, a description naming no sibling, a percentage with no source on the line, a browser-opening command, and a sentence repeated verbatim.
+
+Zero FAIL is the gate. Every WARN is fixed or gets a one-line reason it stays. The rules the script cannot check (freedom level, knowledge versus thinking instruction, Steps agreeing with the template, vocabularies matching across files) stay on the checklist below.
 
 ## Output Format
 
@@ -155,6 +182,13 @@ description: <Third-person description.> Use when the user says "<trigger 1>", "
 
 Read these files before running:
 - [Full paths]
+
+## Knowledge (required for judgment skills)
+
+- **<Finding>** — <source> — <how it changes the output>
+- **<Folklore that fails verification>** — <source of the debunk>
+
+Draws on: <the research briefs or references this section was built from>
 
 ## Steps
 
@@ -187,9 +221,9 @@ Read these files before running:
 - **Examples beat descriptions.** Show one concrete input → output for any non-trivial step. Vague descriptions get interpreted differently every run; literal templates don't.
 - **Brand-coupled names rot.** `ais-doc-format` locks the skill to an identity that may change. Name by the action, not the org.
 - **Don't rewrite an existing skill from scratch.** Read first, find the actual gap, edit minimally. Wholesale rewrites lose hard-won gotchas.
-- **Windows-style paths break Unix.** Use forward slashes always (`scripts/file.py`, not `scripts\file.py`).
+- **Windows-style paths break Unix.** Use forward slashes always (`scripts/<name>.py`, never a backslash path).
 - **Time-sensitive content rots.** Use a collapsible "old patterns" section instead of "before August 2025...".
-- **Pinned model versions rot.** Frontmatter `model:` must be a tier alias (`opus` / `sonnet` / `haiku`) and prose must name the tier ("Opus"), never a version (`claude-opus-4-7`, "Opus 4.7"). Aliases auto-resolve to the latest of each tier, so a new model release needs zero edits — a pinned version silently keeps running an outdated model until someone catches it.
+- **Pinned model versions rot.** Frontmatter `model:` must be a tier alias (`opus` / `sonnet` / `haiku`) and prose must name the tier ("Opus"), never a version (a model ID with version numbers in it, or the tier name followed by a version number). Aliases auto-resolve to the latest of each tier, so a new model release needs zero edits — a pinned version silently keeps running an outdated model until someone catches it.
 - **MCP tools without server prefix fail to resolve.** Use `ServerName:tool_name` (e.g., `BigQuery:bigquery_schema`).
 - **Renames break symlinks silently.** Renaming or moving a skill folder orphans its `~/.claude/skills/` symlink — the skill vanishes from every new session with no error anywhere. If your library installs via symlinks, re-run the install/relink step in the same commit as any rename or move (observed: two renamed skills were dead for days unnoticed).
 - **Name collisions with built-ins shadow skills.** Claude Code ships built-in skills and plugins add more; two skills with one name make invocation ambiguous. Before naming or renaming, check the current session's skill list for the name (observed: a built-in `deep-research` shadowed a personal skill of the same name).
@@ -200,7 +234,7 @@ Read these files before running:
 - **Skill names:** noun phrase preferred, gerund or action-oriented acceptable. No `-skill` suffix, no `anthropic`/`claude` (reserved). Stay consistent within a library.
 - **Description:** third-person, leads with `Use when the user says "..."`, includes ≥5 literal trigger phrases, includes both what + when.
 - **Length:** SKILL.md max 500 lines. Split into `references/` if longer; references one level deep only.
-- **Body sections:** every skill MUST have Steps/Process, Output Format, Gotchas, Constraints in that order. Context Required is optional.
+- **Body sections:** every skill MUST have Steps/Process, Output Format, Gotchas, Constraints in that order. Knowledge is required for judgment skills and sits before Steps. Context Required is optional.
 - **No duplication of CLAUDE.md:** do not repeat rules from CLAUDE.md unless they're skill-specific.
 - **Editing existing skills:** read first, identify the gap, edit minimally — never rewrite wholesale.
 - **Location:** place new skills wherever your library's layout dictates, then make them discoverable from `~/.claude/skills/` (symlink or copy) so they auto-load in new sessions.
@@ -220,12 +254,20 @@ Read these files before running:
 - [ ] No content duplicating CLAUDE.md
 - [ ] Under 500 lines; references one level deep; >100-line refs have a table of contents
 - [ ] No Windows-style paths, no time-sensitive content, consistent terminology
-- [ ] Model references use tier aliases (`opus`/`sonnet`/`haiku`) or bare tier names — never pinned versions (`claude-opus-4-7`, "Opus 4.7"), which rot every release
+- [ ] Model references use tier aliases (`opus`/`sonnet`/`haiku`) or bare tier names — never pinned versions (a model ID with version numbers in it, or a tier name followed by a version number), which rot every release
 - [ ] Every decision point has a stated default; thresholds are numbers, not adjectives
 - [ ] Deterministic work (math, counting, parsing) is a bundled script, not prose instructions
 - [ ] Every load-bearing rule has a mechanical output check with a stated on-failure action
 - [ ] Skill has run end-to-end at least once on a real input or fixture
 - [ ] Multi-file: referenced files exist (`ls`-verified); cross-file promises verified on both sides; shared rules live once, at the bottleneck
 - [ ] Multi-agent: every subagent output has a named consumer; stage tiers assigned; quorum + main-loop fallback stated for partial failure; subagent prompts carry pasted context, not section names
-- [ ] Content skills: sources inline per claim; not-found fallbacks stated; never pads to a count; save path named
+- [ ] Every number and quoted expert in any skill carries its source on the line; not-found fallbacks stated; never pads to a count; save path named
+- [ ] Judgment skills carry a Knowledge section: sourced findings, folklore that fails verification, the research briefs it draws on
+- [ ] Every paragraph is knowledge or a mechanics instruction; no thinking instructions, no principle stated twice
+- [ ] Every trigger phrase tested against sibling skills and preloading agents; collisions settled with a Does NOT clause
+- [ ] Steps agree with the Output Format; templates and assets pass the skill's own checker
+- [ ] Shared vocabularies identical on both sides of every file boundary; deliberate mirrors name their source
+- [ ] No placeholder paths; commands respect the user's standing rules (browser, delete, send)
+- [ ] Mode skills state the mode rule and its default first; single dispatches have a fallback
+- [ ] `scripts/check_skill.py <skill-dir>` reports zero FAIL; every WARN fixed or justified in one line
 - [ ] If editing an existing skill: read first, edit minimally
