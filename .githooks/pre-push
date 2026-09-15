@@ -1,0 +1,17 @@
+#!/bin/sh
+# Refuses a push when scripts/privacy_scan.py finds personal data in a tracked file.
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+# The scan reads the working tree of every tracked file, which equals the pushed
+# content when the tree is clean at push time. A hit that was committed and then
+# removed in a later commit is not seen here; rewrite history before pushing.
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if [ ! -f scripts/privacy_scan.py ]; then
+    echo "pre-push: scripts/privacy_scan.py is missing; push refused" >&2
+    exit 1
+fi
+if ! python3 scripts/privacy_scan.py; then
+    echo "pre-push: privacy scan found personal data (or could not run); push refused" >&2
+    exit 1
+fi
