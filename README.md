@@ -37,7 +37,7 @@ New sessions pick the skill up automatically. Trigger it by saying "run system d
 ## Privacy scan
 
 `scripts/privacy_scan.py` checks every tracked file for personal data (email addresses, phone numbers, home-folder paths, document IDs, API-key shapes, plus private patterns kept outside the repository in `~/.config/privacy-scan/patterns.txt`) and exits 1 on a hit, naming the file and line but never the value.
-After cloning, run `git config core.hooksPath .githooks` once so the pre-push hook refuses any push that fails the scan.
+After cloning, run `git config core.hooksPath .githooks` once so the pre-push hook scans every commit a push would publish and refuses the push on a hit.
 Run `python3 scripts/privacy_scan.py` (or add `--staged` to check what the next commit records) by hand at any time; `python3 scripts/test_privacy_scan.py` runs its tests.
 
 ## License

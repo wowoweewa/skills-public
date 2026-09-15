@@ -1,17 +1,38 @@
 #!/bin/sh
-# Refuses a push when scripts/privacy_scan.py finds personal data in a tracked file.
+# Refuses a push when scripts/privacy_scan.py finds personal data in any commit being pushed.
 # Enable once per clone:  git config core.hooksPath .githooks
 #
-# The scan reads the working tree of every tracked file, which equals the pushed
-# content when the tree is clean at push time. A hit that was committed and then
-# removed in a later commit is not seen here; rewrite history before pushing.
+# git hands this hook one line per ref on stdin: <local ref> <local sha> <remote ref> <remote sha>.
+# Every commit the remote does not have yet is scanned as recorded (not the working tree), so a
+# hit on a branch that is not checked out, or one committed and then removed by a later commit,
+# is still caught before it reaches public history.
 set -u
+remote="$1"
 cd "$(git rev-parse --show-toplevel)" || exit 1
 if [ ! -f scripts/privacy_scan.py ]; then
     echo "pre-push: scripts/privacy_scan.py is missing; push refused" >&2
     exit 1
 fi
-if ! python3 scripts/privacy_scan.py; then
-    echo "pre-push: privacy scan found personal data (or could not run); push refused" >&2
-    exit 1
-fi
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    case "$local_sha" in
+        *[!0]*) ;;
+        *) continue ;;  # deleting a remote ref publishes nothing
+    esac
+    case "$remote_sha" in
+        *[!0]*) range="$remote_sha..$local_sha" ;;
+        *) range="$local_sha --not --remotes=$remote" ;;  # new ref: everything the remote lacks
+    esac
+    # shellcheck disable=SC2086  # $range is deliberately split into rev-list arguments
+    commits=$(git rev-list --reverse $range) || {
+        echo "pre-push: cannot list the commits behind $local_ref; fetch first. Push refused" >&2
+        exit 1
+    }
+    for commit in $commits; do
+        if ! python3 scripts/privacy_scan.py --rev "$commit"; then
+            echo "pre-push: commit $commit failed the privacy scan; push refused" >&2
+            exit 1
+        fi
+    done
+done
+exit 0

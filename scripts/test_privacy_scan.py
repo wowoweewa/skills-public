@@ -155,6 +155,13 @@ class PrivacyScanTests(unittest.TestCase):
         result = self.scan()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_file_names_are_scanned_and_reported_as_line_zero(self) -> None:
+        name = f"docs/{GENERIC_FIXTURES[0][1]}.md"
+        self.write(name, "clean contents\n")
+        result = self.scan()
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stdout, f"{name}:0: email address\n")
+
     def test_runs_from_a_subdirectory_and_reports_root_relative_paths(self) -> None:
         self.write("docs/guide.md", f"{GENERIC_FIXTURES[0][1]}\n")
         self.write("top.md", f"{GENERIC_FIXTURES[0][1]}\n")
@@ -189,6 +196,13 @@ class PrivacyScanTests(unittest.TestCase):
         self.assertEqual(len(result.stderr.splitlines()), 1)
 
     def test_default_private_file_location_is_under_home(self) -> None:
+        self.write("notes.md", "clean line\n")
+        result = self.scan(patterns=None)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(len(result.stderr.splitlines()), 1)
+        self.assertIn("~/.config/privacy-scan/patterns.txt", result.stderr)
+        self.assertNotIn(self.home, result.stderr, "the warning must not reveal the home folder")
+
         config_dir = os.path.join(self.home, ".config", "privacy-scan")
         os.makedirs(config_dir)
         with open(os.path.join(config_dir, "patterns.txt"), "w", encoding="utf-8") as handle:
@@ -208,6 +222,13 @@ class PrivacyScanTests(unittest.TestCase):
         self.assertIn("line 2", result.stderr)
         self.assertNotIn("zorblatt", result.stderr)
 
+        patterns = self.write_patterns("zorblatt{1000000000000}\n")
+        result = self.scan(patterns=patterns)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("line 1", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertNotIn("zorblatt", result.stderr)
+
     # -- staged mode -------------------------------------------------------------
 
     def test_staged_scans_the_index_not_the_working_tree(self) -> None:
@@ -225,6 +246,19 @@ class PrivacyScanTests(unittest.TestCase):
         self.write("notes.md", f"{GENERIC_FIXTURES[0][1]}\n", add=False)
         self.assertEqual(self.scan("--staged").returncode, 0)
         self.assertEqual(self.scan().stdout, "notes.md:1: email address\n")
+
+    def test_rev_scans_a_commit_as_recorded(self) -> None:
+        self.write("notes.md", "clean at first\n")
+        self.git("commit", "-q", "-m", "clean")
+        self.write("notes.md", f"{GENERIC_FIXTURES[0][1]}\n")
+        self.git("commit", "-q", "-m", "leak")
+        self.write("notes.md", "clean again\n")
+        self.git("commit", "-q", "-m", "fix")
+        self.assertEqual(self.scan("--rev", "HEAD~2").returncode, 0)
+        self.assertEqual(self.scan("--rev", "HEAD~1").stdout, "notes.md:1: email address\n")
+        self.assertEqual(self.scan("--rev", "HEAD").returncode, 0)
+        self.assertEqual(self.scan().returncode, 0)
+        self.assertEqual(self.scan("--rev", "no-such-commit").returncode, 2)
 
     # -- pre-push hook -----------------------------------------------------------
 
@@ -248,17 +282,35 @@ class PrivacyScanTests(unittest.TestCase):
         )
         self.assertEqual(pushed.returncode, 0, pushed.stderr)
 
+        # The hit is committed on another branch and removed by the next commit; main stays
+        # checked out and clean. A working-tree scan would pass this push.
+        self.git("checkout", "-q", "-b", "leaky")
         self.write("notes.md", f"{GENERIC_FIXTURES[0][1]}\n")
         self.git("commit", "-q", "-m", "leak")
+        leak_sha = self.git("rev-parse", "HEAD").stdout.strip()
+        self.write("notes.md", "clean again\n")
+        self.git("commit", "-q", "-m", "fix")
+        self.git("checkout", "-q", "main")
         refused = subprocess.run(
-            ["git", "push", "-q", "origin", "main"], cwd=self.repo, env=self.env, capture_output=True, text=True
+            ["git", "push", "-q", "origin", "leaky"], cwd=self.repo, env=self.env, capture_output=True, text=True
         )
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn("push refused", refused.stderr)
+        self.assertIn(leak_sha, refused.stderr, "the message must name the offending commit")
         self.assertIn("notes.md:1: email address", refused.stdout + refused.stderr)
         self.assertNotIn(GENERIC_FIXTURES[0][1], refused.stdout + refused.stderr)
-        remote_sha = self.git("rev-parse", "main", cwd=remote).stdout.strip()
-        self.assertEqual(remote_sha, clean_sha, "the refused push must not reach the remote")
+        remote_refs = self.git("for-each-ref", "--format=%(refname)", cwd=remote).stdout.split()
+        self.assertEqual(remote_refs, ["refs/heads/main"], "the refused push must not reach the remote")
+        self.assertEqual(self.git("rev-parse", "main", cwd=remote).stdout.strip(), clean_sha)
+
+        # A clean branch built on the same history still pushes.
+        self.git("checkout", "-q", "-b", "tidy")
+        self.write("more.md", "still clean\n")
+        self.git("commit", "-q", "-m", "tidy")
+        pushed = subprocess.run(
+            ["git", "push", "-q", "origin", "tidy"], cwd=self.repo, env=self.env, capture_output=True, text=True
+        )
+        self.assertEqual(pushed.returncode, 0, pushed.stderr)
 
 
 if __name__ == "__main__":
