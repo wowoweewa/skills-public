@@ -30,7 +30,8 @@ df -h / ; pmset -g therm
 ps axo pcpu,rss,comm | awk 'NR>1 {cmd=$3; for(i=4;i<=NF;i++) cmd=cmd" "$i; app=cmd; if (match(app, /\/[^\/]+\.app\//)) app=substr(app, RSTART+1, RLENGTH-2); else {n=split(app, p, "/"); app=p[n]} cpu[app]+=$1; mem[app]+=$2} END {for (a in cpu) printf "%6.1f%%CPU %8.0fMB  %s\n", cpu[a], mem[a]/1024, a}' | sort -rn | head -12
 
 # Instantaneous per-process CPU — use ONLY the second sample (the first is cumulative garbage)
-top -l 2 -s 2 -o cpu -stats pid,cpu,mem,command | tail -15
+# -n 15 keeps the 15 busiest per sample; without it, tail shows the 15 idlest (all 0.0%)
+top -l 2 -s 2 -o cpu -n 15 -stats pid,cpu,mem,command | tail -16
 
 # Compositing + signing + indexing daemons
 ps aux | grep -E "[W]indowServer|[t]rustd|[m]ds|[e]cosystem" | awk '{printf "%5s%%CPU  %s\n", $3, $11}'
