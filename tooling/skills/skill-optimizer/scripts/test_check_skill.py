@@ -26,7 +26,7 @@ sys.dont_write_bytecode = True  # keep a __pycache__ folder out of the skill
 
 import check_skill as cs  # noqa: E402
 
-LIMIT = 400  # the description limit the checker must enforce
+LIMIT = 1024  # the frontmatter description field's own limit, the only hard cap on length
 
 TRIGGERS = '"sort my files", "tidy this folder", "rename these files", "clean up downloads", "organize my desktop"'
 GOOD_DESC = (
@@ -105,24 +105,31 @@ class CheckerCase(unittest.TestCase):
 
 
 class DescriptionLimit(CheckerCase):
-    def test_limit_constant_is_400(self) -> None:
-        self.assertEqual(cs.DESC_MAX, LIMIT)
+    """No fixed length below the frontmatter field's limit (the 400 cap was withdrawn)."""
 
-    def test_description_one_over_the_limit_fails(self) -> None:
-        self.write("SKILL.md", skill_text(desc_of_length(LIMIT + 1)))
-        self.assert_fail(f"description is {LIMIT + 1} characters")
+    def test_limit_constant_is_the_frontmatter_limit(self) -> None:
+        self.assertEqual(cs.DESC_MAX, 1024)
+        self.assertEqual(LIMIT, 1024)
+
+    def test_description_of_401_characters_passes(self) -> None:
+        self.write("SKILL.md", skill_text(desc_of_length(401)))
+        self.assert_no_fail()
 
     def test_description_at_the_limit_passes(self) -> None:
         self.write("SKILL.md", skill_text(desc_of_length(LIMIT)))
         self.assert_no_fail()
 
-    def test_failure_message_names_the_limit_and_the_listing_budget(self) -> None:
-        self.write("SKILL.md", skill_text(desc_of_length(LIMIT + 50)))
+    def test_description_one_over_the_limit_fails(self) -> None:
+        self.write("SKILL.md", skill_text(desc_of_length(LIMIT + 1)))
+        self.assert_fail("description is 1025 characters")
+
+    def test_failure_message_names_the_frontmatter_limit(self) -> None:
+        self.write("SKILL.md", skill_text(desc_of_length(LIMIT + 1)))
         messages = [f for f in self.fails() if "characters" in f]
         self.assertEqual(len(messages), 1, messages)
-        self.assertIn(str(LIMIT), messages[0])
-        self.assertIn("listing budget", messages[0])
-        self.assertIn("name only", messages[0])
+        self.assertIn("1024", messages[0])
+        self.assertIn("frontmatter", messages[0])
+        self.assertNotIn("400", messages[0])
 
 
 class PinnedModelVersion(CheckerCase):
@@ -242,10 +249,11 @@ class OwnSkill(CheckerCase):
     def test_own_skill_md_has_no_fail(self) -> None:
         self.assertEqual(self.own_fails(), [])
 
-    def test_own_skill_md_states_no_other_limit(self) -> None:
-        for old in ("1024", "1,024"):
+    def test_own_skill_md_states_no_400_cap(self) -> None:
+        for old in ("400 characters", "400-character", "under 400", "at 400"):
             self.assertNotIn(old, self.own_text)
-        self.assertIn(f"{LIMIT} characters", self.own_text)
+        self.assertIn("1,024 characters", self.own_text)
+        self.assertIn("no fixed length", self.own_text.lower())
 
     def test_output_format_template_passes_the_checker(self) -> None:
         start = self.own_text.index("````markdown\n") + len("````markdown\n")

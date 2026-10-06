@@ -29,16 +29,17 @@ REQUIRED_SECTIONS = {
 }
 
 # Description rules
-# Why 400: Claude Code lists every skill's name and description in each session
-# inside one budget, 1% of the context window (measured at 30,000 characters on
-# a 1M-token model), and when the listing overflows it drops whole descriptions,
+# Why 1024: it is the frontmatter description field's own limit, and the only
+# hard cap. A description has no fixed length below it: it holds every clause
+# Claude needs to pick the skill and nothing else (SKILL.md, step 2).
+# What else limits length is a library total, not a per-skill number: Claude
+# Code lists every skill's name and description in each session inside one
+# budget, 1% of the context window (measured at 30,000 characters on a
+# 1M-token model), and when the listing overflows it drops whole descriptions,
 # least-invoked skills first (code.claude.com/docs/en/skills, "Skill
-# descriptions are cut short"). Measured October 2026: 42 descriptions averaging
-# 842 characters under the old cap of 1024 left 21 skills listed by name only;
-# at 400 each the same 42 need 16,800 characters, about 18,300 with skill
-# names and nine short descriptions, inside the roughly 19,500 left after
-# built-in and remaining plugin entries once unused plugin sources are off.
-DESC_MAX = 400
+# descriptions are cut short"). This script reads one skill at a time, so it
+# cannot add up that total.
+DESC_MAX = 1024
 MIN_TRIGGERS = 5
 USE_WHEN_LEAD_CHARS = 250  # "Use when" should appear this early; later = tail gets truncated first
 FIRST_SECOND_PERSON = re.compile(r"\b(I can|I will|I help|I'll|you can use|you should|your skill)\b", re.I)
@@ -93,8 +94,8 @@ def check_description(skill_md: Path, fields: dict[str, str]) -> None:
             "FAIL",
             skill_md,
             1,
-            f"description is {len(desc)} characters; cap is {DESC_MAX} (every description shares one listing budget, "
-            "1% of the context window; over budget, the least-invoked skills are listed by name only and cannot be picked)",
+            f"description is {len(desc)} characters; the frontmatter description field allows {DESC_MAX} "
+            "(cut clauses Claude does not need to pick the skill; keep every trigger and routing clause)",
         )
     if "Use when" not in desc:
         add("FAIL", skill_md, 1, 'description has no "Use when" clause')
