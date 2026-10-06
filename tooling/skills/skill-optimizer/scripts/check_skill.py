@@ -29,13 +29,22 @@ REQUIRED_SECTIONS = {
 }
 
 # Description rules
-DESC_MAX = 1024
+# Why 400: Claude Code lists every skill's name and description in each session
+# inside one budget, 1% of the context window (measured at 30,000 characters on
+# a 1M-token model), and when the listing overflows it drops whole descriptions,
+# least-invoked skills first (code.claude.com/docs/en/skills, "Skill
+# descriptions are cut short"). Measured October 2026: 42 descriptions averaging
+# 842 characters under the old cap of 1024 left 21 skills listed by name only;
+# at 400 each the same 42 need about 18,300 characters, inside the roughly
+# 19,500 left after built-in entries once unused plugin sources are off.
+DESC_MAX = 400
 MIN_TRIGGERS = 5
 USE_WHEN_LEAD_CHARS = 250  # "Use when" should appear this early; later = tail gets truncated first
 FIRST_SECOND_PERSON = re.compile(r"\b(I can|I will|I help|I'll|you can use|you should|your skill)\b", re.I)
 QUOTED = re.compile(r'"[^"\n]{3,}"')
 
 # Body rules
+PINNED_MODEL_EXEMPT = {"LESSONS.md"}  # a run ledger must record which model version ran
 PLACEHOLDER_PATH = re.compile(r"<this skill's directory>|<this skill>/|<skill[- ]dir(?:ectory)?>/", re.I)  # a bare <skill-dir> argument is fine; a path prefix is not
 PINNED_MODEL = re.compile(r"claude-(?:opus|sonnet|haiku|fable|mythos)-\d|\b(?:Opus|Sonnet|Haiku|Fable)\s+\d(?:\.\d)?\b")
 EVIDENCE_PHRASE = re.compile(r"\b(studies show|research shows|data shows|studies have shown|research has shown|it is proven)\b", re.I)
@@ -79,7 +88,13 @@ def check_description(skill_md: Path, fields: dict[str, str]) -> None:
         add("FAIL", skill_md, 1, "frontmatter has no description")
         return
     if len(desc) > DESC_MAX:
-        add("FAIL", skill_md, 1, f"description is {len(desc)} characters; cap is {DESC_MAX} (the tail is truncated first)")
+        add(
+            "FAIL",
+            skill_md,
+            1,
+            f"description is {len(desc)} characters; cap is {DESC_MAX} (every description shares one listing budget, "
+            "1% of the context window; over budget, the least-invoked skills are listed by name only and cannot be picked)",
+        )
     if "Use when" not in desc:
         add("FAIL", skill_md, 1, 'description has no "Use when" clause')
     elif desc.find("Use when") > USE_WHEN_LEAD_CHARS:
@@ -119,7 +134,7 @@ def check_body(skill_md: Path, text: str, body_start: int) -> None:
 
 def check_text_rules(md: Path, text: str) -> None:
     for i, line in enumerate(text.splitlines(), 1):
-        if PINNED_MODEL.search(line):
+        if md.name not in PINNED_MODEL_EXEMPT and PINNED_MODEL.search(line):
             add("FAIL", md, i, "pinned model version; use a tier alias (opus / sonnet / haiku)")
         if EVIDENCE_PHRASE.search(line) and not SOURCE_HINT.search(line):
             add("FAIL", md, i, 'evidence phrase ("studies show" or similar) with no source on the line')

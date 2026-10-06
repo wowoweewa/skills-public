@@ -1,6 +1,6 @@
 ---
 name: skill-optimizer
-description: Use when the user says "create a skill", "build a new skill", "make a skill", "write a skill", "edit this skill", "improve this skill", "rewrite this skill", "review this SKILL.md", "fix this skill description", "the skill isn't triggering", or any request involving authoring or modifying a SKILL.md file. Quality-assurance companion to `skill-creator`: load it alongside `skill-creator` even when skill-creator is the only one named, because it adds the quality criteria skill-creator deliberately leaves open — knowledge that raises the ceiling, third-person descriptions with five or more triggers and sibling routing, gotcha rigor, freedom-matching, executor-proofing, self-verification with a bundled checker, multi-agent cost architecture, truth discipline. Does NOT replace skill-creator (use skill-creator for scaffolding, packaging, and evals).
+description: Use when the user says "create a skill", "write a skill", "edit this skill", "improve this skill", "review this SKILL.md", "fix this skill description", "the skill isn't triggering", or any SKILL.md is written or changed. Checks it for triggering, sourced knowledge, gotchas and self-checks. Loads beside skill-creator even when only it is named (use skill-creator for scaffolding and evals).
 ---
 
 # Skill Optimizer
@@ -16,21 +16,19 @@ Quality-assurance layer for SKILL.md authoring. Loads alongside `skill-creator` 
 | `skill-creator` (Anthropic) | Mechanics — folder scaffolding, frontmatter validation, plugin registration, evals workflow |
 | `skill-optimizer` (this) | Quality — description triggering, naming, conciseness, gotcha rigor, anti-patterns |
 
-Use both: `skill-creator` for the scaffolding and iteration loop, this skill for content quality.
-
 ## The 5 Skill Killers — quick check
 
 The five most common reasons skills fail. Avoid these and most quality issues take care of themselves.
 
-| # | Killer | Fix |
+| # | Killer | Fixed in |
 |---|---|---|
-| 1 | **Description doesn't trigger properly** — too vague, too narrow, or wrong person | Specific, loud, third-person, `Use when...` format |
-| 2 | **Over-defining the process** — railroading instead of guiding; a skill boosts capability and never limits it | Guidance and checklists, not rigid templates for creative output. Tight freedom for fragile mechanics, loose for judgment |
-| 3 | **Stating the obvious, omitting the non-obvious** — tokens spent on what the model already knows, none on what it lacks | Every paragraph is either knowledge (a finding, a source, an observed failure, a why) or a thinking instruction. Keep knowledge, cut thinking instructions |
-| 4 | **Missing gotcha section** — not capturing failure patterns | Document every failure you've seen. This IS the skill's value |
-| 5 | **Monolithic blob** — everything in one file | SKILL.md under 500 lines. Move references to separate files |
+| 1 | **Description doesn't trigger properly** — too vague, too narrow, or wrong person | Step 2 |
+| 2 | **Over-defining the process** — railroading instead of guiding | Step 4 |
+| 3 | **Stating the obvious, omitting the non-obvious** — tokens spent on what the model already knows, none on what it lacks | Step 5 |
+| 4 | **Missing gotcha section** — not capturing failure patterns | Step 3 |
+| 5 | **Monolithic blob** — everything in one file | Step 6 |
 
-The Process section below is the detailed how-to for avoiding each killer. The killers cover the SKILL.md document itself; Process steps 7–10 cover execution reliability — the half most authors skip, and where skills actually fail in the field.
+The killers cover the SKILL.md document itself; Process steps 7–10 cover execution reliability — the half most authors skip, and where skills actually fail in the field.
 
 ## Process
 
@@ -57,14 +55,16 @@ Whatever form a library already standardizes on, keep it — don't introduce a s
 
 The description is the **most critical line** in the skill — it's the primary mechanism Claude uses to decide whether to fire the skill. Write it for the model asking *"when should I fire?"*
 
-- **Third person only.** "Processes Excel files and generates reports." Never "I can help..." or "You can use this..." — first/second person breaks discovery.
+- **Third person only.** "Processes Excel files and generates reports." Never "I can help..." or "You can use this..." — a mixed point of view confuses skill selection and breaks discovery.
 - **Lead with `Use when the user says "..."`** followed by **≥5 literal trigger phrases** users would actually type, including casual phrasings, abbreviations, and how real prompts come in.
-- **Be LOUD, not quiet.** Claude tends to under-trigger skills. End with one concrete sentence on what the skill *does*, not what it *is*.
-- **Stay under 1024 characters.** The frontmatter `description` field caps at 1024 — loudness past the cap gets truncated, and the truncated tail is usually the trigger phrases.
+- **Be LOUD, not quiet.** Claude tends to under-trigger skills. Loudness comes from literal phrases, not from length.
+- **Stay at or under 400 characters.** `check_skill.py` fails a longer one; the Knowledge line under this list says why.
 - **Both what AND when.** All "when to use" info goes in the description, never the body.
-- **Test every trigger against the siblings.** Before shipping, list every skill in the library and every agent that preloads this skill that could also claim each trigger phrase, and settle each collision with `Does NOT trigger on X (use Y)` naming the sibling. An agent that preloads a skill never repeats that skill's triggers — one phrase would otherwise spawn the agent and load the skill at once. (Observed: a routing test across eleven sibling skills found eighteen of twenty phrases claimed by two or more.)
+- **Test every trigger against the siblings.** Before shipping, list every skill in the library and every agent that preloads this skill that could also claim each trigger phrase, and settle the collisions in one `Does NOT trigger on X (use Y)` clause naming the closest sibling; when the clause has no room for a collision, drop or reword that trigger. An agent that preloads a skill never repeats that skill's triggers — one phrase would otherwise spawn the agent and load the skill at once. (Observed: a routing test across eleven sibling skills found eighteen of twenty phrases claimed by two or more.)
 
-✅ `Processes Excel files, creates pivot tables, generates charts. Use when the user says "analyze this xlsx", "make a pivot table", "chart this spreadsheet", or works with .xlsx/.xlsm files.`
+**Knowledge.** Claude Code lists every skill's name and description in each session inside one shared budget, 1% of the model's context window; when the listing overflows it drops whole descriptions, starting with the skills invoked least (source: code.claude.com/docs/en/skills, "Skill descriptions are cut short", read October 2026). A skill listed by name only cannot be matched to a request, so it stays least-invoked and stays dropped. (Observed, October 2026: the budget measured 30,000 characters on a model with a 1M-token window; 42 descriptions averaging 842 characters each passed a per-description check, nothing checked the total, and 21 of the 42 skills were listed by name only. At 400 characters each the same 42 need about 18,300 characters, inside the roughly 19,500 left after built-in entries once unused plugin sources are switched off.) A description therefore carries three parts, in this order, and nothing else: `Use when the user says` with five or more quoted phrases; one short sentence of what the skill *does*, not what it *is*; one routing clause naming the sibling.
+
+✅ `Use when the user says "analyze this xlsx", "make a pivot table", "chart this spreadsheet", "clean up this workbook", "sum these columns", or attaches an .xlsx or .xlsm file. Builds pivot tables, charts and summaries from Excel files. Does NOT trigger on CSV-only requests (use csv-tools).`
 
 ❌ `A neuroscience-informed designer that builds courses...` — reads as a tagline; won't trigger reliably.
 
@@ -97,7 +97,7 @@ Judgment skills default to High. A constraint earns its place only with an obser
 
 **Default assumption: Claude is already very smart.** Ask of every paragraph: is this knowledge (a finding, a source, an observed failure, a why) or a thinking instruction? Keep knowledge, cut thinking instructions. Also cut the same principle stated twice — a rule repeated six times across a file reads as emphasis to the author and as noise to the model. (Observed: one design skill stated its central principle six times and its scope rule four times.)
 
-- Cut generic advice ("write production-ready code") — duplicates CLAUDE.md
+- Cut generic advice ("write production-ready code") — it lives in CLAUDE.md and tells the model nothing new; repeat a CLAUDE.md rule only when it is specific to the skill
 - Cut identity preambles ("Act as a senior strategist...") — legacy prompt-engineering pattern; tell the model what your *approach* does, not what *persona* to adopt
 
 ### 6. Stay under 500 lines
@@ -160,9 +160,9 @@ A rule without a check will be violated silently — not because the executor is
 python3 ~/.claude/skills/skill-optimizer/scripts/check_skill.py <skill-dir>
 ```
 
-It fails on: a description over 1024 characters, under five quoted triggers, or without "Use when"; first or second person in the description; SKILL.md over 500 lines; a missing required section; a referenced file that does not exist; a table-of-contents entry with no heading; a placeholder path; a pinned model version; an evidence phrase with no source on the line; a bundled script that fails `--help`. It warns on: "Use when" arriving late, a description naming no sibling, a percentage with no source on the line, a browser-opening command, and a sentence repeated verbatim.
+It fails on: a description over 400 characters, under five quoted triggers, or without "Use when"; first or second person in the description; SKILL.md over 500 lines; a missing required section; a referenced file that does not exist; a table-of-contents entry with no heading; a placeholder path; a pinned model version (except in a run ledger named `LESSONS.md`); an evidence phrase with no source on the line; a bundled script that fails `--help`. It warns on: "Use when" arriving late, a description naming no sibling, a percentage with no source on the line, a browser-opening command, and a sentence repeated verbatim.
 
-Zero FAIL is the gate. Every WARN is fixed or gets a one-line reason it stays. The rules the script cannot check (freedom level, knowledge versus thinking instruction, Steps agreeing with the template, vocabularies matching across files) stay on the checklist below.
+Zero FAIL is the gate. Every WARN is fixed or gets a one-line reason it stays. The rules the script cannot check (freedom level, knowledge versus thinking instruction, Steps agreeing with the template, vocabularies matching across files) stay on the checklist below. The script reads one skill at a time, so it cannot add up a library's descriptions against the listing budget.
 
 ## Output Format
 
@@ -171,7 +171,7 @@ Every new skill follows this template:
 ````markdown
 ---
 name: <skill-name>
-description: <Third-person description.> Use when the user says "<trigger 1>", "<trigger 2>", "<trigger 3>", "<trigger 4>", "<trigger 5>", or <triggering context>. <One sentence on what the skill does.>
+description: Use when the user says "<trigger 1>", "<trigger 2>", "<trigger 3>", "<trigger 4>", "<trigger 5>", or <triggering context>. <One short sentence on what the skill does.> Does NOT trigger on <adjacent request> (use <sibling-skill>).
 ---
 
 # <Title Case Name>
@@ -214,16 +214,12 @@ Draws on: <the research briefs or references this section was built from>
 
 ## Gotchas
 
-- **Quiet descriptions don't trigger.** Tagline-style descriptions ("A neuroscience-informed designer that...") don't fire reliably. Lead with literal phrases users would say.
-- **First/second person breaks discovery.** "I can help" or "You can use" in the description — inconsistent point-of-view confuses Claude's skill selection. Always third person.
-- **Generic principles waste tokens.** "Write production-ready code" lives in CLAUDE.md and tells Claude nothing new. A skill should contain non-obvious, failure-pattern-derived knowledge.
 - **One sentence = one skill.** If you find yourself writing two distinct trigger sets, that's two skills. Split them.
 - **Examples beat descriptions.** Show one concrete input → output for any non-trivial step. Vague descriptions get interpreted differently every run; literal templates don't.
 - **Brand-coupled names rot.** `ais-doc-format` locks the skill to an identity that may change. Name by the action, not the org.
-- **Don't rewrite an existing skill from scratch.** Read first, find the actual gap, edit minimally. Wholesale rewrites lose hard-won gotchas.
 - **Windows-style paths break Unix.** Use forward slashes always (`scripts/<name>.py`, never a backslash path).
 - **Time-sensitive content rots.** Use a collapsible "old patterns" section instead of "before August 2025...".
-- **Pinned model versions rot.** Frontmatter `model:` must be a tier alias (`opus` / `sonnet` / `haiku`) and prose must name the tier ("Opus"), never a version (a model ID with version numbers in it, or the tier name followed by a version number). Aliases auto-resolve to the latest of each tier, so a new model release needs zero edits — a pinned version silently keeps running an outdated model until someone catches it.
+- **Pinned model versions rot.** Frontmatter `model:` must be a tier alias (`opus` / `sonnet` / `haiku`) and prose must name the tier ("Opus"), never a version (a model ID with version numbers in it, or the tier name followed by a version number). Aliases auto-resolve to the latest of each tier, so a new model release needs zero edits — a pinned version silently keeps running an outdated model until someone catches it. One exemption: a run ledger named `LESSONS.md` has to record which model version ran, so the checker skips this rule in that file and nowhere else.
 - **MCP tools without server prefix fail to resolve.** Use `ServerName:tool_name` (e.g., `BigQuery:bigquery_schema`).
 - **Renames break symlinks silently.** Renaming or moving a skill folder orphans its `~/.claude/skills/` symlink — the skill vanishes from every new session with no error anywhere. If your library installs via symlinks, re-run the install/relink step in the same commit as any rename or move (observed: two renamed skills were dead for days unnoticed).
 - **Name collisions with built-ins shadow skills.** Claude Code ships built-in skills and plugins add more; two skills with one name make invocation ambiguous. Before naming or renaming, check the current session's skill list for the name (observed: a built-in `deep-research` shadowed a personal skill of the same name).
@@ -231,43 +227,25 @@ Draws on: <the research briefs or references this section was built from>
 
 ## Constraints
 
-- **Skill names:** noun phrase preferred, gerund or action-oriented acceptable. No `-skill` suffix, no `anthropic`/`claude` (reserved). Stay consistent within a library.
-- **Description:** third-person, leads with `Use when the user says "..."`, includes ≥5 literal trigger phrases, includes both what + when.
-- **Length:** SKILL.md max 500 lines. Split into `references/` if longer; references one level deep only.
-- **Body sections:** every skill MUST have Steps/Process, Output Format, Gotchas, Constraints in that order. Knowledge is required for judgment skills and sits before Steps. Context Required is optional.
-- **No duplication of CLAUDE.md:** do not repeat rules from CLAUDE.md unless they're skill-specific.
-- **Editing existing skills:** read first, identify the gap, edit minimally — never rewrite wholesale.
+- **Editing existing skills:** read first, find the actual gap, edit minimally. Wholesale rewrites lose hard-won gotchas.
 - **Location:** place new skills wherever your library's layout dictates, then make them discoverable from `~/.claude/skills/` (symlink or copy) so they auto-load in new sessions.
+- **Checker changes:** a change to `scripts/check_skill.py` starts with a failing test in `scripts/test_check_skill.py` and ends with `python3 ~/.claude/skills/skill-optimizer/scripts/test_check_skill.py` passing — an untested checker rule can change without anyone noticing.
 
 ## Verification checklist (run before declaring done)
 
-- [ ] Description in third person; leads with `Use when the user says "..."`; ≥5 literal trigger phrases
-- [ ] Description includes both what the skill does AND when to use it; under 1024 characters
-- [ ] Name doesn't collide with a built-in, plugin, or existing library skill (check the session skill list)
-- [ ] After create/rename/move: the skill is discoverable from `~/.claude/skills/` (symlink/copy resolves) and appears in a fresh session's skill list
-- [ ] Name follows noun-phrase / gerund / action-oriented form; not vague, generic, brand-coupled, or reserved
-- [ ] Body has Steps/Process, Output Format, Gotchas, Constraints (in that order); Context Required only if relevant
-- [ ] Steps' freedom level matches task fragility (high for creative, low for fragile)
-- [ ] Output Format shows a literal template, not a description
-- [ ] Gotchas captures observed failure patterns, not generic warnings
-- [ ] No identity preambles ("Act as...")
-- [ ] No content duplicating CLAUDE.md
-- [ ] Under 500 lines; references one level deep; >100-line refs have a table of contents
-- [ ] No Windows-style paths, no time-sensitive content, consistent terminology
-- [ ] Model references use tier aliases (`opus`/`sonnet`/`haiku`) or bare tier names — never pinned versions (a model ID with version numbers in it, or a tier name followed by a version number), which rot every release
-- [ ] Every decision point has a stated default; thresholds are numbers, not adjectives
-- [ ] Deterministic work (math, counting, parsing) is a bundled script, not prose instructions
-- [ ] Every load-bearing rule has a mechanical output check with a stated on-failure action
-- [ ] Skill has run end-to-end at least once on a real input or fixture
-- [ ] Multi-file: referenced files exist (`ls`-verified); cross-file promises verified on both sides; shared rules live once, at the bottleneck
-- [ ] Multi-agent: every subagent output has a named consumer; stage tiers assigned; quorum + main-loop fallback stated for partial failure; subagent prompts carry pasted context, not section names
-- [ ] Every number and quoted expert in any skill carries its source on the line; not-found fallbacks stated; never pads to a count; save path named
-- [ ] Judgment skills carry a Knowledge section: sourced findings, folklore that fails verification, the research briefs it draws on
-- [ ] Every paragraph is knowledge or a mechanics instruction; no thinking instructions, no principle stated twice
-- [ ] Every trigger phrase tested against sibling skills and preloading agents; collisions settled with a Does NOT clause
-- [ ] Steps agree with the Output Format; templates and assets pass the skill's own checker
-- [ ] Shared vocabularies identical on both sides of every file boundary; deliberate mirrors name their source
-- [ ] No placeholder paths; commands respect the user's standing rules (browser, delete, send)
-- [ ] Mode skills state the mode rule and its default first; single dispatches have a fallback
+The first item covers every rule listed under Mechanical check. The rest are the rules the script cannot check; each names where the rule is stated and none is restated here.
+
 - [ ] `scripts/check_skill.py <skill-dir>` reports zero FAIL; every WARN fixed or justified in one line
-- [ ] If editing an existing skill: read first, edit minimally
+- [ ] Name: form and reserved words (step 1); no collision with a built-in, plugin, or library skill; not brand-coupled (Gotchas)
+- [ ] After create/rename/move: the symlink or copy in `~/.claude/skills/` resolves and the skill appears in a fresh session's skill list (Constraints, Gotchas)
+- [ ] Description: the three parts are present in order and every trigger is tested against siblings and preloading agents (step 2)
+- [ ] Sections in the step 3 order; a judgment skill has its Knowledge section
+- [ ] Freedom level matches task fragility (step 4)
+- [ ] Every paragraph is knowledge or a mechanics instruction; nothing stated twice; no identity preamble (step 5)
+- [ ] References one level deep (step 6)
+- [ ] Executor-proofing: every bullet of step 7
+- [ ] Self-verification: every bullet of step 8, including one end-to-end run on a real input or fixture
+- [ ] Multi-file or multi-agent skill: every bullet of step 9
+- [ ] Truth discipline: every bullet of step 10
+- [ ] Every Gotcha checked against the skill; terminology consistent throughout
+- [ ] Editing an existing skill: the diff is minimal (Constraints)
