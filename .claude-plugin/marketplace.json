@@ -1,6 +1,6 @@
 {
   "name": "skills-public",
-  "description": "Public Claude Code skills: safe Mac performance diagnosis and cleanup, organized by category.",
+  "description": "Public Claude Code skills, organized by category: mac-system-doctor (safe Mac performance diagnosis and cleanup) and skill-optimizer (quality checks for writing SKILL.md files).",
   "owner": {
     "name": "wowoweewa",
     "url": "https://github.com/wowoweewa/skills-public"
@@ -9,7 +9,7 @@
     {
       "name": "tooling",
       "description": "System tooling skills: mac-system-doctor — diagnoses Mac slowness and applies consent-gated, reversible fixes; skill-optimizer — quality-assurance layer for authoring SKILL.md files (triggering, gotcha rigor, verification checklist).",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./tooling"
     }
   ]
