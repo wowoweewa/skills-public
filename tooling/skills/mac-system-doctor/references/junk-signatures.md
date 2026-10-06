@@ -1,6 +1,6 @@
 # Junk Signatures — startup items safe to propose removing, and the keep-list
 
-Match against login items (`System Events` listing) and launch agent plists (`~/Library/LaunchAgents/`, `/Library/LaunchAgents/`). These are patterns, not exact names — vendors rename constantly. When an item matches neither list, look up what it does before classifying; never guess from the filename alone.
+Match against login items (`System Events` listing) and launch agent plists (`~/Library/LaunchAgents/`, `/Library/LaunchAgents/`). These are patterns, not exact names — vendors rename constantly.
 
 ## Junk patterns (safe to propose — app still works when launched manually)
 
@@ -31,7 +31,7 @@ Match against login items (`System Events` listing) and launch agent plists (`~/
 
 - An item on neither list with a recognizable app name: classify by the table *category* it resembles (updater? launcher helper? sync engine?).
 - An unrecognizable item: identify before judging — `codesign -dvvv` on the plist's `Program` binary; the `Authority=Developer ID Application: <vendor>` line names who shipped it (a helper labeled `com.starstechnologies.*` turned out to be a poker client's updater this way). Still unknown after that: leave it alone and flag it as "unknown — left untouched".
-- Orphan check beats category: whatever the category, if the parent app is no longer installed, the item is an orphan and safe to propose. Verify absence in /Applications (and the app's known install dirs), not by name-guessing.
-- Substring hits are not identifications — a `wdc` (Western Digital) scan also matches `com.crowdcafe.windowmagnet`. Resolve every pattern hit to its owning app before classifying.
+- Orphan check beats category: for every `/Library/LaunchDaemons` and `/Library/LaunchAgents` entry, read the plist's `Program` path, then verify the parent app still exists (`ls /Applications/<App>.app`, and the app's known install dirs), not by name-guessing. Parent uninstalled → orphan, safe to propose whatever the category; parent present → judge by the tables above.
+- Substring hits are not identifications — short patterns false-positive across reverse-DNS names: a `wdc` (Western Digital) scan also matches `com.crowdcafe.windowmagnet`, an unrelated, actively-used app. Resolve every pattern hit to its owning app before classifying; delete only names captured and verified, never pattern output directly.
 - System-domain items (`/Library/LaunchAgents`, `/Library/LaunchDaemons`) need admin rights — removal only through the SKILL.md consented-elevation path (one osascript admin dialog), never raw sudo; without that grant, mention only.
 - The keep-list always wins a conflict between the two tables.
