@@ -35,8 +35,9 @@ REQUIRED_SECTIONS = {
 # least-invoked skills first (code.claude.com/docs/en/skills, "Skill
 # descriptions are cut short"). Measured October 2026: 42 descriptions averaging
 # 842 characters under the old cap of 1024 left 21 skills listed by name only;
-# at 400 each the same 42 need about 18,300 characters, inside the roughly
-# 19,500 left after built-in entries once unused plugin sources are off.
+# at 400 each the same 42 need 16,800 characters, about 18,300 with skill
+# names and nine short descriptions, inside the roughly 19,500 left after
+# built-in and remaining plugin entries once unused plugin sources are off.
 DESC_MAX = 400
 MIN_TRIGGERS = 5
 USE_WHEN_LEAD_CHARS = 250  # "Use when" should appear this early; later = tail gets truncated first
