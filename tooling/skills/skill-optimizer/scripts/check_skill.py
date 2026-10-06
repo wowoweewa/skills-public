@@ -107,8 +107,8 @@ def check_description(skill_md: Path, fields: dict[str, str]) -> None:
     m = FIRST_SECOND_PERSON.search(QUOTED.sub("", desc))
     if m:
         add("FAIL", skill_md, 1, f'description uses first/second person ("{m.group(0)}"); third person only')
-    if not re.search(r"does not trigger|does NOT trigger|defers? .* to|routes? .* to|use \w[\w-]* (?:for|instead)", desc, re.I):
-        add("WARN", skill_md, 1, "description names no sibling for adjacent requests (add 'Does NOT trigger on X (use Y)')")
+    if not re.search(r"does not trigger|does NOT trigger|defers? .* to|routes? .* to|use \w[\w-]* (?:for|instead)|\bnot for\b[^.]*\([\w-]+\)", desc, re.I):
+        add("WARN", skill_md, 1, "description names no sibling for adjacent requests (add 'Not for X (sibling-name)' or 'Does NOT trigger on X (use sibling-name)')")
 
 
 def check_body(skill_md: Path, text: str, body_start: int) -> None:

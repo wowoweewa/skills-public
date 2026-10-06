@@ -132,6 +132,14 @@ class DescriptionLimit(CheckerCase):
         self.assertNotIn("400", messages[0])
 
 
+class SiblingRouting(CheckerCase):
+    def test_not_for_clause_counts_as_naming_a_sibling(self) -> None:
+        desc = f"Use when the user says {TRIGGERS}. Sorts files into dated folders. Not for backups (backup-runner)."
+        self.write("SKILL.md", skill_text(desc))
+        warns = [msg for level, _p, _l, msg in self.run_checker() if level == "WARN" and "names no sibling" in msg]
+        self.assertEqual(warns, [])
+
+
 class PinnedModelVersion(CheckerCase):
     PINNED = "Run 12 used Opus 4.1 for the critic and passed.\n"
 
@@ -263,7 +271,7 @@ class OwnSkill(CheckerCase):
         self.write("SKILL.md", template)
         self.assert_no_fail()
 
-    def test_output_format_template_description_has_the_three_parts_in_order(self) -> None:
+    def test_output_format_template_description_has_triggers_situation_and_routing_in_order(self) -> None:
         start = self.own_text.index("````markdown\n")
         line = next(l for l in self.own_text[start:].splitlines() if l.startswith("description:"))
         desc = line[len("description:"):].strip()
